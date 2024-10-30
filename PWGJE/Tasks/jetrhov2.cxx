@@ -9,16 +9,11 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-///
-/// \file   qVectorsTable.cxx
-/// \author Cindy Mordasini <cindy.mordasini@cern.ch>
-/// \author Anna Önnerstad <anna.onnerstad@cern.ch>
-///
-/// \brief  Task calculating the Q-vectors for each collision in a bunch crossing
-///         (with or without corrections) and save the results in a dedicated table.
-///
-
+// jet v2 task
+//
+/// \author Yubiao Wang <yubiao.wang@cern.ch>
 // C++/ROOT includes.
+
 #include <chrono>
 #include <string>
 #include <vector>
@@ -118,11 +113,8 @@ struct Jetrhov2Task {
 
   EventPlaneHelper helperEP;
   int DetId;
-
 //=====================< evt pln ang end >=====================//
 
-    // Configurable<float> pTHatExponent{"pTHatExponent", 6.0, "exponent of the event weight for the calculation of pTHat"};
-    // Configurable<float> pTHatMaxMCD{"pTHatMaxMCD", 999.0, "maximum fraction of hard scattering for jet acceptance in detector MC"};
 //===========================CF PbPb flow===========================
     Configurable<float> selectedJetsRadius{"selectedJetsRadius", 0.4, "resolution parameter for histograms without radius"};
 
@@ -351,8 +343,6 @@ struct Jetrhov2Task {
         histosQA.add(Form("histEvtPlFinalV%d", cfgnMods->at(i)), "", {HistType::kTH2F, {axisEvtPl, axisCent}});
       }
 //=====================< evt pln ang end >=====================//
-    
-
     }
 
     Preslice<aod::ChargedJets> JetsPerJCollision = aod::jet::collisionId;
@@ -566,7 +556,6 @@ struct Jetrhov2Task {
   PROCESS_SWITCH(Jetrhov2Task, processJetsRhoAreaSubData, "jet finder QA for rho-area subtracted jets", true);
 //< rho bkg end >//
 
-
 //< local rho and bkg sub >//
   void processLocalRho(soa::Filtered<soa::Join<JetCollisions, aod::BkgChargedRhos, aod::Qvectors>> const& collisions, 
                       soa::Join<aod::ChargedJets, aod::ChargedJetConstituents> const& jets, 
@@ -630,7 +619,6 @@ struct Jetrhov2Task {
           histosQA.fill(HIST("histEvtPlTwistV3"), helperEP.GetEventPlane(collision.qvecRe()[DetInd + 2], collision.qvecIm()[DetInd + 2], nmode), collision.cent());
           histosQA.fill(HIST("histEvtPlFinalV3"), helperEP.GetEventPlane(collision.qvecRe()[DetInd + 3], collision.qvecIm()[DetInd + 3], nmode), collision.cent());
       }
-    
 //< Psi_EP,2, JetPtCorr = Jet_pT-rho*A in-plane and out-of-plane >//
       auto collJets = jets.sliceBy(JetsPerJCollision, collision.globalIndex());  //get the jet in collisions
 
@@ -740,8 +728,6 @@ struct Jetrhov2Task {
   }
   PROCESS_SWITCH(Jetrhov2Task, processSigmaPt, "QA for charged tracks", true);
 
-
-
   void processRandomConeDataV2(soa::Filtered<soa::Join<JetCollisions, aod::BkgChargedRhos, aod::Qvectors>>::iterator const& collision, 
                              soa::Join<aod::ChargedJets, aod::ChargedJetConstituents> const& jets, 
                              soa::Filtered<JetTracks> const& tracks)
@@ -751,60 +737,59 @@ struct Jetrhov2Task {
     }
  
     for (auto i = 0; i < cfgnMods->size(); i++) {
-    TRandom3 randomNumber(0);
-    float randomConeEta = randomNumber.Uniform(trackEtaMin + randomConeR, trackEtaMax - randomConeR);
-    float randomConePhi = randomNumber.Uniform(0.0, 2 * M_PI);
-    float randomConePt = 0;
+      TRandom3 randomNumber(0);
+      float randomConeEta = randomNumber.Uniform(trackEtaMin + randomConeR, trackEtaMax - randomConeR);
+      float randomConePhi = randomNumber.Uniform(0.0, 2 * M_PI);
+      float randomConePt = 0;
 
-      int nmode = cfgnMods->at(i);
-      int DetInd = DetId * 4 + cfgnTotalSystem * 4 * (nmode - 2);
+        int nmode = cfgnMods->at(i);
+        int DetInd = DetId * 4 + cfgnTotalSystem * 4 * (nmode - 2);
 
-    Double_t RcPhiPsi2;
-    float evtPl2 = helperEP.GetEventPlane(collision.qvecRe()[DetInd], collision.qvecIm()[DetInd], nmode);
-    RcPhiPsi2 = randomConePhi - evtPl2;
+      Double_t RcPhiPsi2;
+      float evtPl2 = helperEP.GetEventPlane(collision.qvecRe()[DetInd], collision.qvecIm()[DetInd], nmode);
+      RcPhiPsi2 = randomConePhi - evtPl2;
 
-    for (auto const& track : tracks) {
-      if (jetderiveddatautilities::selectTrack(track, trackSelection)) {
-        float dPhi = RecoDecay::constrainAngle(track.phi() - randomConePhi, static_cast<float>(-M_PI));
-        float dEta = track.eta() - randomConeEta;
-        if (TMath::Sqrt(dEta * dEta + dPhi * dPhi) < randomConeR) {
-          randomConePt += track.pt();
+      for (auto const& track : tracks) {
+        if (jetderiveddatautilities::selectTrack(track, trackSelection)) {
+          float dPhi = RecoDecay::constrainAngle(track.phi() - randomConePhi, static_cast<float>(-M_PI));
+          float dEta = track.eta() - randomConeEta;
+          if (TMath::Sqrt(dEta * dEta + dPhi * dPhi) < randomConeR) {
+            randomConePt += track.pt();
+          }
         }
       }
-    }
-    registry.fill(HIST("h2_RandomCornPhi_rhorandomcone"), RcPhiPsi2, randomConePt - M_PI * randomConeR * randomConeR * collision.rho());
-    registry.fill(HIST("h3_centrality_RCpt_RandomCornPhi_rhorandomcone"), collision.centrality(), randomConePt - M_PI * randomConeR * randomConeR * collision.rho(), RcPhiPsi2, 1.0);
+      registry.fill(HIST("h2_RandomCornPhi_rhorandomcone"), RcPhiPsi2, randomConePt - M_PI * randomConeR * randomConeR * collision.rho());
+      registry.fill(HIST("h3_centrality_RCpt_RandomCornPhi_rhorandomcone"), collision.centrality(), randomConePt - M_PI * randomConeR * randomConeR * collision.rho(), RcPhiPsi2, 1.0);
 
-    // removing the leading jet from the random cone
-    if (jets.size() > 0) { // if there are no jets in the acceptance (from the jetfinder cuts) then there can be no leading jet
-      float dPhiLeadingJet = RecoDecay::constrainAngle(jets.iteratorAt(0).phi() - randomConePhi, static_cast<float>(-M_PI));
-      float dEtaLeadingJet = jets.iteratorAt(0).eta() - randomConeEta;
+      // removing the leading jet from the random cone
+      if (jets.size() > 0) { // if there are no jets in the acceptance (from the jetfinder cuts) then there can be no leading jet
+        float dPhiLeadingJet = RecoDecay::constrainAngle(jets.iteratorAt(0).phi() - randomConePhi, static_cast<float>(-M_PI));
+        float dEtaLeadingJet = jets.iteratorAt(0).eta() - randomConeEta;
 
-      bool jetWasInCone = false;
-      while (TMath::Sqrt(dEtaLeadingJet * dEtaLeadingJet + dPhiLeadingJet * dPhiLeadingJet) < jets.iteratorAt(0).r() / 100.0 + randomConeR) {
-        jetWasInCone = true;
-        randomConeEta = randomNumber.Uniform(trackEtaMin + randomConeR, trackEtaMax - randomConeR);
-        randomConePhi = randomNumber.Uniform(0.0, 2 * M_PI);
-        dPhiLeadingJet = RecoDecay::constrainAngle(jets.iteratorAt(0).phi() - randomConePhi, static_cast<float>(-M_PI));
-        dEtaLeadingJet = jets.iteratorAt(0).eta() - randomConeEta;
-      }
-      if (jetWasInCone) {
-        randomConePt = 0.0;
-        for (auto const& track : tracks) {
-          if (jetderiveddatautilities::selectTrack(track, trackSelection)) { // if track selection is uniformTrack, dcaXY and dcaZ cuts need to be added as they aren't in the selection so that they can be studied here
-            float dPhi = RecoDecay::constrainAngle(track.phi() - randomConePhi, static_cast<float>(-M_PI));
-            float dEta = track.eta() - randomConeEta;
-            if (TMath::Sqrt(dEta * dEta + dPhi * dPhi) < randomConeR) {
-              randomConePt += track.pt();
+        bool jetWasInCone = false;
+        while (TMath::Sqrt(dEtaLeadingJet * dEtaLeadingJet + dPhiLeadingJet * dPhiLeadingJet) < jets.iteratorAt(0).r() / 100.0 + randomConeR) {
+          jetWasInCone = true;
+          randomConeEta = randomNumber.Uniform(trackEtaMin + randomConeR, trackEtaMax - randomConeR);
+          randomConePhi = randomNumber.Uniform(0.0, 2 * M_PI);
+          dPhiLeadingJet = RecoDecay::constrainAngle(jets.iteratorAt(0).phi() - randomConePhi, static_cast<float>(-M_PI));
+          dEtaLeadingJet = jets.iteratorAt(0).eta() - randomConeEta;
+        }
+        if (jetWasInCone) {
+          randomConePt = 0.0;
+          for (auto const& track : tracks) {
+            if (jetderiveddatautilities::selectTrack(track, trackSelection)) { // if track selection is uniformTrack, dcaXY and dcaZ cuts need to be added as they aren't in the selection so that they can be studied here
+              float dPhi = RecoDecay::constrainAngle(track.phi() - randomConePhi, static_cast<float>(-M_PI));
+              float dEta = track.eta() - randomConeEta;
+              if (TMath::Sqrt(dEta * dEta + dPhi * dPhi) < randomConeR) {
+                randomConePt += track.pt();
+              }
             }
           }
         }
       }
+      registry.fill(HIST("h2_RandomCornPhi_rhorandomconewithoutleadingjet"), RcPhiPsi2, randomConePt - M_PI * randomConeR * randomConeR * collision.rho());
+      registry.fill(HIST("h3_centrality_RCpt_RandomCornPhi_rhorandomconewithoutleadingjet"), collision.centrality(), randomConePt - M_PI * randomConeR * randomConeR * collision.rho(), RcPhiPsi2, 1.0);
     }
-  registry.fill(HIST("h2_RandomCornPhi_rhorandomconewithoutleadingjet"), RcPhiPsi2, randomConePt - M_PI * randomConeR * randomConeR * collision.rho());
-  registry.fill(HIST("h3_centrality_RCpt_RandomCornPhi_rhorandomconewithoutleadingjet"), collision.centrality(), randomConePt - M_PI * randomConeR * randomConeR * collision.rho(), RcPhiPsi2, 1.0);
-  }
- 
   }
   PROCESS_SWITCH(Jetrhov2Task, processRandomConeDataV2, "QA for random cone estimation of background fluctuations in data", true);
 
