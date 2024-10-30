@@ -74,32 +74,31 @@ using MyCollisions = soa::Join<aod::Collisions, aod::EvSels, aod::Qvectors>;
 //=====================< evt pln ang end >=====================//
 
 struct Jetrhov2Task {
+  HistogramRegistry registry;
+  HistogramRegistry histosQA{"histosQA", {}, OutputObjHandlingPolicy::AnalysisObject, false, false};
 
-    HistogramRegistry registry;
-    HistogramRegistry histosQA{"histosQA", {}, OutputObjHandlingPolicy::AnalysisObject, false, false};
+  Configurable<std::string> eventSelections{"eventSelections", "sel8", "choose event selection"};
+  Configurable<std::string> trackSelections{"trackSelections", "globalTracks", "set track selections"};
 
-    Configurable<std::string> eventSelections{"eventSelections", "sel8", "choose event selection"};
-    Configurable<std::string> trackSelections{"trackSelections", "globalTracks", "set track selections"};
+  Configurable<std::vector<double>> jetRadii{"jetRadii", std::vector<double>{0.4}, "jet resolution parameters"};
 
-    Configurable<std::vector<double>> jetRadii{"jetRadii", std::vector<double>{0.4}, "jet resolution parameters"};
+  Configurable<float> vertexZCut{"vertexZCut", 10.0f, "Accepted z-vertex range"};
+  Configurable<float> centralityMin{"centralityMin", -999.0, "minimum centrality"};
+  Configurable<float> centralityMax{"centralityMax", 999.0, "maximum centrality"};
+  Configurable<float> trackPtMin{"trackPtMin", 0.15, "minimum pT acceptance for tracks"};  //0.2 "soft" track
+  Configurable<float> trackPtMax{"trackPtMax", 1000., "maximum pT acceptance for tracks"};  //5 "soft" track
+  Configurable<float> trackEtaMin{"trackEtaMin", -0.9, "minimum eta acceptance for tracks"};
+  Configurable<float> trackEtaMax{"trackEtaMax", 0.9, "maximum eta acceptance for tracks"};
 
-    Configurable<float> vertexZCut{"vertexZCut", 10.0f, "Accepted z-vertex range"};
-    Configurable<float> centralityMin{"centralityMin", -999.0, "minimum centrality"};
-    Configurable<float> centralityMax{"centralityMax", 999.0, "maximum centrality"};
-    Configurable<float> trackPtMin{"trackPtMin", 0.15, "minimum pT acceptance for tracks"};  //0.2 "soft" track
-    Configurable<float> trackPtMax{"trackPtMax", 1000., "maximum pT acceptance for tracks"};  //5 "soft" track
-    Configurable<float> trackEtaMin{"trackEtaMin", -0.9, "minimum eta acceptance for tracks"};
-    Configurable<float> trackEtaMax{"trackEtaMax", 0.9, "maximum eta acceptance for tracks"};
+  Configurable<float> jetAreaFractionMin{"jetAreaFractionMin", -99.0, "used to make a cut on the jet areas"};
+  Configurable<float> leadingConstituentPtMin{"leadingConstituentPtMin", -99.0, "minimum pT selection on jet constituent"};
+  Configurable<float> jetPtMin{"jetPtMin", 0.15, "minimum pT acceptance for jets"};
+  Configurable<float> jetPtMax{"jetPtMax", 200.0, "maximum pT acceptance for jets"};
+  Configurable<float> jetEtaMin{"jetEtaMin", -0.9, "minimum eta acceptance for jets"};
+  Configurable<float> jetEtaMax{"jetEtaMax", 0.9, "maximum eta acceptance for jets"};
+  Configurable<float> jetRadius{"jetRadius", 0.2, "jet resolution parameters"};
 
-    Configurable<float> jetAreaFractionMin{"jetAreaFractionMin", -99.0, "used to make a cut on the jet areas"};
-    Configurable<float> leadingConstituentPtMin{"leadingConstituentPtMin", -99.0, "minimum pT selection on jet constituent"};
-    Configurable<float> jetPtMin{"jetPtMin", 0.15, "minimum pT acceptance for jets"};
-    Configurable<float> jetPtMax{"jetPtMax", 200.0, "maximum pT acceptance for jets"};
-    Configurable<float> jetEtaMin{"jetEtaMin", -0.9, "minimum eta acceptance for jets"};
-    Configurable<float> jetEtaMax{"jetEtaMax", 0.9, "maximum eta acceptance for jets"};
-    Configurable<float> jetRadius{"jetRadius", 0.2, "jet resolution parameters"};
-
-    Configurable<float> randomConeR{"randomConeR", 0.4, "size of random Cone for estimating background fluctuations"};
+  Configurable<float> randomConeR{"randomConeR", 0.4, "size of random Cone for estimating background fluctuations"};
 
 //=====================< evt pln ang >=====================//
   Configurable<bool> cfgAddEvtSel{"cfgAddEvtSel", true, "event selection"};
@@ -792,7 +791,6 @@ struct Jetrhov2Task {
     }
   }
   PROCESS_SWITCH(Jetrhov2Task, processRandomConeDataV2, "QA for random cone estimation of background fluctuations in data", true);
-
 
   void processTracks(soa::Filtered<JetCollisions>::iterator const& collision,
                      soa::Filtered<JetTracks> const& tracks)
